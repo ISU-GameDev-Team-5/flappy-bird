@@ -67,8 +67,6 @@ function love.update(dt)
     bird.speedY = bird.speedY + gravity * dt
     bird.y = bird.y + bird.speedY * dt
 
-    print(bird.y, bird.speedY)
-
     -- Обновление наклона птицы в зависимости от скорости
     bird.rotation = bird.rotation + tiltSpeed * (bird.speedY < 0 and -1 or 1) * dt
 
