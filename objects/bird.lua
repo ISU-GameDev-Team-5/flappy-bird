@@ -9,8 +9,11 @@ function Bird:new(x, y, sprite)
 
     instance.x = x or 0
     instance.y = y or 0
-    instance.speed = 100
+    instance.speed = 0
     instance.sprite = sprite
+
+    instance.width = sprite:getWidth()
+    instance.height = sprite:getHeight()
 
     -- Параметры наклона
     instance.rotation = {
@@ -36,12 +39,22 @@ function Bird:draw()
         self.y,
         self.rotation.current,
         1, 1, -- scale
-        self.sprite:getWidth() / 2,
-        self.sprite:getHeight() / 2
+        self.width / 2,
+        self.height / 2
     )
 end
 
-function Bird:__updateRotation(dt)
+-- получаем x с учетом смещения спрайта
+function Bird:getX()
+    return self.x - self.width / 2
+end
+
+-- получаем y с учетом смещения спрайта
+function Bird:getY()
+    return self.y - self.height / 2
+end
+
+local function updateRotation(self, dt)
     self.rotation.current = math.max(
         self.rotation.limit.up,
         math.min(
@@ -58,10 +71,10 @@ function Bird:update(dt)
     self.y = self.y + self.speed * dt
 
     if self.speed < 0 then
-        self:__updateRotation(dt)
+        updateRotation(self, dt)
     elseif self.timeFromLastSwing > self.rotation.timeout then
         self.rotation.speed = 4
-        self:__updateRotation(dt)
+        updateRotation(self, dt)
     end
 
     self.rotation.speed = self.rotation.speed + self.rotation.acceleration * dt
@@ -75,8 +88,10 @@ function Bird:flap()
     self.timeFromLastSwing = 0
 end
 
+-- птичку жалко :(
 function Bird:die()
-    self.speed = 1000
+    self.speed = 0
+    self.rotation.current = self.rotation.limit.down
 end
 
 return Bird

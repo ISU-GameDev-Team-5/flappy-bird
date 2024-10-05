@@ -16,13 +16,19 @@ local damageSounds = {
     love.audio.newSource("assets/audio/sounds/damage/1.mp3", "static"),
 }
 
+local GameStatuses = {
+    MENU = 1,
+    PLAYING = 2,
+    GAME_OVER = -1,
+}
+
 -- Основные переменные
 local pipes = {}
 local pipeSpeed = 200
 local pipeInterval = 2
 local timeSinceLastPipe = 0
 local score = 0
-local gameState = "menu" -- menu, playing, gameover
+local gameState = GameStatuses.MENU
 
 -- Создание птицы
 local bird = {}
@@ -34,15 +40,17 @@ local function playBackgroundMusic()
 end
 
 local function gameOver()
-    gameState = "gameover"
+    gameState = GameStatuses.GAME_OVER
     music:stop()
+    bird:die()
     damageSounds[love.math.random(1, #damageSounds)]:play()
 end
 
 local function resetGame()
     bird.y = Settings.window.height / 2
     bird.speed = 0
-    bird.rotation.current = 0
+    bird.rotation.current = math.rad(0)
+    bird.timeFromLastSwing = 0
     pipes = {}
     timeSinceLastPipe = 0
     score = 0
@@ -64,30 +72,29 @@ end
 
 -- Проверим, врезалась ли птичка куда-то
 local function isBirdCrashed()
+    -- Получим реальные координаты
+    local bx = bird:getX()
+    local by = bird:getY()
+
     -- Проверка столкновения с нижней границей
-    if bird.y + bird.sprite:getHeight() > Settings.window.height then
+    if by + bird.height > Settings.window.height then
         return true
     end
 
-    -- Проверка столкновнеия с вернхней границей
-    if bird.y < 0 then
+    -- Проверка столкновнеия с верхней границей
+    if by < 0 then
         return true
     end
-
-    local pipeXOffset = 32
 
     for _, pipe in ipairs(pipes) do
-        if bird.x + bird.sprite:getWidth() > pipe.x + pipeXOffset and bird.x < pipe.x + pipe.width + pipeXOffset then
+        if bx + bird.width > pipe.x and bx < pipe.x + pipe.width then
             -- Проверка столкновения с верхней трубой
-            -- используем высоту / 2 для того чтобы птичка не проходила в верхнюю трубу
-            if bird.y < pipe.topY + bird.sprite:getHeight() / 2 then
-                print("bird crashes top pipe")
+            if by < pipe.topY then
                 return true
             end
 
             -- Проверка столкновения с нижней трубой
-            if bird.y + bird.sprite:getHeight() > pipe.bottomY then
-                print("bird down pipe")
+            if by + bird.height > pipe.bottomY then
                 return true
             end
         end
@@ -112,7 +119,15 @@ function love.load()
 end
 
 function love.update(dt)
-    if gameState == "menu" or gameState == "gameover" then return end
+    if gameState == GameStatuses.MENU then return end
+
+    if bird:getY() + bird.height > Settings.window.height then
+        return true
+    end
+
+    bird:update(dt)
+
+    if gameState == GameStatuses.GAME_OVER then return end
 
     -- Передвижение труб
     for i = #pipes, 1, -1 do
@@ -128,8 +143,6 @@ function love.update(dt)
     if isBirdCrashed() then
         gameOver()
     end
-
-    bird:update(dt)
 
     timeSinceLastPipe = timeSinceLastPipe + dt
     if timeSinceLastPipe > pipeInterval then
@@ -148,14 +161,14 @@ function love.draw()
         love.graphics.draw(pipeSprite, pipe.x, pipe.bottomY)
     end
 
-    if gameState == "menu" then
+    if gameState == GameStatuses.MENU then
         love.graphics.setColor(1, 1, 1)
         love.graphics.printf("Flappy Bird", 0, Settings.window.height / 2 - 200, Settings.window.width, "center")
         love.graphics.printf("Press SPACE to Start", 0, Settings.window.height / 2 - 150, Settings.window.width, "center")
         return
     end
 
-    if gameState == "gameover" then
+    if gameState == GameStatuses.GAME_OVER then
         local r, g, b = love.math.colorFromBytes(132, 193, 238)
         love.graphics.setColor(r, g, b, 0.75)
         love.graphics.rectangle("fill", Settings.window.width / 2 - 150, 30, 300, 300)
@@ -173,25 +186,25 @@ end
 
 function love.keypressed(key)
     -- Обработка игры
-    if gameState == "playing" then
+    if gameState == GameStatuses.PLAYING then
         if key == "space" then
             bird:flap()
         end
     end
 
     -- Обработка меню
-    if gameState == "menu" then
+    if gameState == GameStatuses.MENU then
         if key == "space" then
-            gameState = "playing"
+            gameState = GameStatuses.PLAYING
             playBackgroundMusic()
         end
     end
 
     -- Обработка окончания игры
-    if gameState == "gameover" then
+    if gameState == GameStatuses.GAME_OVER then
         if key == "r" then
             resetGame()
-            gameState = "playing"
+            gameState = GameStatuses.PLAYING
 
             respawnSounds[love.math.random(1, #respawnSounds)]:play()
             playBackgroundMusic()
