@@ -22,6 +22,8 @@ local GameStatuses = {
     GAME_OVER = -1,
 }
 
+local flashDuration = 0.5
+
 -- Основные переменные
 local pipes = {}
 local pipeSpeed = 200
@@ -51,6 +53,7 @@ local function resetGame()
     bird.speed = 0
     bird.rotation.current = math.rad(0)
     bird.timeFromLastSwing = 0
+    flashDuration = 0.5
     pipes = {}
     timeSinceLastPipe = 0
     score = 0
@@ -169,6 +172,15 @@ function love.draw()
     end
 
     if gameState == GameStatuses.GAME_OVER then
+        -- рисуем вспышку
+        flashDuration = flashDuration - 0.1
+        if flashDuration > 0 then
+            local r, g, b = love.math.colorFromBytes(255, 255, 255)
+            love.graphics.setColor(r, g, b, flashDuration)
+            love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
+        end
+
+        -- рисуем меню
         local r, g, b = love.math.colorFromBytes(132, 193, 238)
         love.graphics.setColor(r, g, b, 0.75)
         love.graphics.rectangle("fill", Settings.window.width / 2 - 150, 30, 300, 300)
